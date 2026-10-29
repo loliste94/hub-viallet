@@ -125,6 +125,23 @@ body {
   gap: 5px;
 }
 .refresh-btn:hover { opacity: 0.85; }
+.sync-btn {
+  background: #238636;
+  border: none;
+  color: #fff;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: opacity .2s;
+}
+.sync-btn:hover { opacity: 0.85; }
+.sync-btn:disabled { opacity: 0.5; cursor: default; }
 
 /* ── Main grid ── */
 .grid {
@@ -560,6 +577,7 @@ body {
   </div>
   <div class="topbar-right">
     <button class="theme-btn" onclick="toggleTheme()">☀ / ☾</button>
+    <button class="sync-btn" id="sync-btn" onclick="triggerSync()">⟳ Sync</button>
     <button class="refresh-btn">↻ Actualiser</button>
   </div>
 </div>
@@ -572,7 +590,7 @@ body {
     <div class="panel-header">
       <div class="panel-title">
         <div class="panel-icon icon-ol">✉</div>
-        Outlook
+        <a href="https://outlook.office365.com/mail/inbox" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Outlook</a>
       </div>
       <div style="display:flex;gap:6px;align-items:center;">
         <span class="badge badge-ol">7</span>
@@ -654,7 +672,7 @@ body {
     <div class="panel-header">
       <div class="panel-title">
         <div class="panel-icon icon-sf">⚡</div>
-        Salesforce FSL — Interventions non clôturées
+        <a href="https://winpharma.lightning.force.com/lightning/o/WorkOrder/list" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Salesforce FSL — Interventions non clôturées</a>
       </div>
       <div style="display:flex;gap:6px;align-items:center;">
         <span class="badge badge-sf">4</span>
@@ -710,7 +728,7 @@ body {
     <div class="panel-header">
       <div class="panel-title">
         <div class="panel-icon icon-teams">T</div>
-        Microsoft Teams
+        <a href="https://teams.microsoft.com" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Microsoft Teams</a>
       </div>
     </div>
     <div class="panel-body">
@@ -775,7 +793,7 @@ body {
     <div class="panel-header">
       <div class="panel-title">
         <div class="panel-icon icon-wt">W</div>
-        Winteam — Rapport
+        <a href="https://winteam.eu" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">Winteam — Rapport</a>
       </div>
       <div style="display:flex;gap:6px;align-items:center;">
         <span class="badge badge-wt">@3</span>
@@ -902,11 +920,12 @@ body {
     rows.innerHTML = items.map(r => {
       const st = statusLabel(r.status);
       const date = (r.date||'').slice(0,10).replace(/(\d{4})-(\d{2})-(\d{2})/, '$3/$2') || '—';
-      return `<div class="sf-row">
+      const sfUrl = `https://winpharma.lightning.force.com/one/one.app#global-search/${encodeURIComponent(r.id)}`;
+      return `<a class="sf-row" href="${sfUrl}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;cursor:pointer;">
         <div class="sf-row-id">${r.id}</div>
         <div class="sf-row-client">${r.client||'—'}</div>
         <div class="sf-row-status ${st.cls}">${date}</div>
-      </div>`;
+      </a>`;
     }).join('');
   }
 
@@ -922,12 +941,13 @@ body {
     const list = document.querySelector('.ol-mail-list');
     if (list && mails.length > 0) {
       list.innerHTML = mails.slice(0,8).map(m => `
-        <div class="ol-mail unread">
+        <a class="ol-mail unread" href="${m.url || 'https://outlook.office365.com/mail/inbox'}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;cursor:pointer;display:grid;grid-template-columns:8px 1fr auto;gap:4px 10px;align-items:center;">
           <div class="ol-mail-dot"></div>
           <div class="ol-mail-from">${m.from||''}</div>
-          <div class="ol-mail-sub">${m.subject||''}</div>
           <div class="ol-mail-time">${m.date||''}</div>
-        </div>`).join('');
+          <div></div>
+          <div class="ol-mail-sub" style="grid-column:2/4">${m.subject||''}</div>
+        </a>`).join('');
     }
   }
 
@@ -953,4 +973,21 @@ body {
 
   loadData();
   document.querySelector('.refresh-btn').addEventListener('click', loadData);
+
+  async function triggerSync() {
+    const btn = document.getElementById('sync-btn');
+    btn.disabled = true;
+    btn.textContent = '⟳ Synchro...';
+    try {
+      const r = await fetch('http://localhost:5555/sync', { signal: AbortSignal.timeout(5000) });
+      if (r.ok) {
+        btn.textContent = '✓ Lancé';
+        setTimeout(() => { btn.textContent = '⟳ Sync'; btn.disabled = false; loadData(); }, 35000);
+      } else { throw new Error(); }
+    } catch {
+      btn.textContent = '✗ Local off';
+      btn.style.background = '#6e4040';
+      setTimeout(() => { btn.textContent = '⟳ Sync'; btn.disabled = false; btn.style.background = ''; }, 4000);
+    }
+  }
 </script>
