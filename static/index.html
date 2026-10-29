@@ -1,0 +1,956 @@
+<title>Hub Viallet</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+/* ── Layout: left=Outlook, right-top=Salesforce, right-bottom=Winteam ── */
+:root {
+  --bg:        #0d1117;
+  --surface:   #161b22;
+  --surface2:  #1c2128;
+  --border:    #30363d;
+  --fg:        #e6edf3;
+  --fg2:       #8b949e;
+  --fg3:       #484f58;
+
+  --wt:        #1f6feb;   /* Winteam blue */
+  --wt-soft:   #1c3a5e;
+  --sf:        #0a74da;   /* Salesforce */
+  --sf-soft:   #0a2a4a;
+  --ol:        #0078d4;   /* Outlook */
+  --ol-soft:   #0a2038;
+  --teams:     #6264a7;   /* Teams */
+  --teams-soft:#2a2a4a;
+
+  --mention:   #f78166;
+  --unread:    #3fb950;
+  --badge:     #58a6ff;
+
+  --radius:    10px;
+  --font:      'Inter', system-ui, sans-serif;
+  --mono:      'JetBrains Mono', monospace;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg:       #f0f2f5;
+    --surface:  #ffffff;
+    --surface2: #f6f8fa;
+    --border:   #d0d7de;
+    --fg:       #1f2328;
+    --fg2:      #636c76;
+    --fg3:      #b0b8c4;
+    --wt-soft:    #dbeafe;
+    --sf-soft:    #dbeafe;
+    --ol-soft:    #dbeafe;
+    --teams-soft: #e8e8f5;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg:         #f0f2f5;
+  --surface:    #ffffff;
+  --surface2:   #f6f8fa;
+  --border:     #d0d7de;
+  --fg:         #1f2328;
+  --fg2:        #636c76;
+  --fg3:        #b0b8c4;
+  --wt-soft:    #dbeafe;
+  --sf-soft:    #dbeafe;
+  --ol-soft:    #dbeafe;
+  --teams-soft: #e8e8f5;
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px;
+  min-height: 100vh;
+}
+
+/* ── Top bar ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.topbar-left { display: flex; align-items: center; gap: 10px; }
+.logo {
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.3px;
+  color: var(--fg);
+}
+.logo span { color: var(--badge); }
+.updated {
+  font-size: 11px;
+  color: var(--fg3);
+  font-family: var(--mono);
+}
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+.theme-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--fg2);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: var(--font);
+}
+.theme-btn:hover { border-color: var(--badge); color: var(--fg); }
+.refresh-btn {
+  background: var(--badge);
+  border: none;
+  color: #fff;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.refresh-btn:hover { opacity: 0.85; }
+
+/* ── Main grid ── */
+.grid {
+  display: grid;
+  grid-template-columns: 320px 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 12px;
+  height: calc(100vh - 80px);
+  min-height: 600px;
+}
+
+@media (max-width: 1000px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    height: auto;
+  }
+  .panel-outlook { grid-column: span 2; grid-row: auto; }
+  .panel-winteam { grid-column: span 2; }
+}
+@media (max-width: 600px) {
+  .grid { grid-template-columns: 1fr; }
+  .panel-outlook, .panel-winteam { grid-column: span 1; }
+}
+
+/* ── Panels ── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+.panel-outlook { grid-row: 1 / 3; }
+.panel-winteam { grid-column: 2 / 4; }
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+  flex-shrink: 0;
+}
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 12.5px;
+}
+.panel-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.icon-wt     { background: var(--wt-soft);    color: var(--wt); }
+.icon-sf     { background: var(--sf-soft);    color: var(--sf); }
+.icon-ol     { background: var(--ol-soft);    color: var(--ol); }
+.icon-teams  { background: var(--teams-soft); color: var(--teams); }
+
+.badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-family: var(--mono);
+}
+.badge-wt    { background: var(--wt);    color: #fff; }
+.badge-sf    { background: var(--sf);    color: #fff; }
+.badge-ol    { background: var(--ol);    color: #fff; }
+.badge-teams { background: var(--teams); color: #fff; }
+.badge-grey { background: var(--surface2); color: var(--fg2); border: 1px solid var(--border); }
+
+.placeholder-label {
+  font-size: 10px;
+  color: var(--fg3);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* ── Section separators inside panels ── */
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--fg3);
+  padding: 10px 14px 4px;
+}
+
+/* ── Mention cards (Winteam) ── */
+.mention-card {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: default;
+  transition: background 0.1s;
+}
+.mention-card:last-child { border-bottom: none; }
+.mention-card:hover { background: var(--surface2); }
+
+.mention-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.mention-author {
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--fg);
+}
+.mention-reply {
+  font-size: 11px;
+  color: var(--fg2);
+  font-style: italic;
+}
+.mention-date {
+  font-size: 10.5px;
+  color: var(--fg3);
+  font-family: var(--mono);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.mention-group {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--badge);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.mention-preview {
+  font-size: 12px;
+  color: var(--fg2);
+  line-height: 1.5;
+  word-break: break-word;
+}
+.mention-preview .at { color: var(--mention); font-weight: 500; }
+.action-needed {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--mention);
+  background: rgba(247,129,102,0.1);
+  border: 1px solid rgba(247,129,102,0.25);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+/* ── Group badge separator ── */
+.group-sep {
+  padding: 8px 14px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.group-sep-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg2);
+}
+.group-sep-badge {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--mono);
+  padding: 1px 6px;
+  background: var(--mention);
+  color: #fff;
+  border-radius: 10px;
+}
+.group-sep-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── Message important ── */
+.important-card {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,200,50,0.04);
+  border-left: 3px solid #d4a017;
+}
+.important-card:hover { background: rgba(255,200,50,0.08); }
+.important-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #d4a017;
+  margin-bottom: 3px;
+}
+
+/* ── Outlook placeholder ── */
+.ol-placeholder {
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.ol-date-header {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--fg);
+  letter-spacing: -0.3px;
+}
+.ol-date-sub {
+  font-size: 11px;
+  color: var(--fg3);
+  margin-top: 1px;
+}
+.ol-events { display: flex; flex-direction: column; gap: 6px; }
+.ol-event {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  border-left: 3px solid var(--ol);
+}
+.ol-event-time {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg3);
+  min-width: 40px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.ol-event-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg);
+}
+.ol-event-sub {
+  font-size: 11px;
+  color: var(--fg2);
+  margin-top: 1px;
+}
+.ol-mail-list { display: flex; flex-direction: column; gap: 4px; }
+.ol-mail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.ol-mail.unread { border-left: 3px solid var(--ol); }
+.ol-mail-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--ol);
+  flex-shrink: 0;
+}
+.ol-mail-from { font-size: 12px; font-weight: 600; color: var(--fg); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ol-mail-sub { font-size: 11px; color: var(--fg2); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+.ol-mail-time { font-size: 10px; font-family: var(--mono); color: var(--fg3); flex-shrink: 0; }
+.ol-connect-cta {
+  margin-top: 4px;
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--fg3);
+}
+.ol-connect-cta a { color: var(--ol); text-decoration: none; }
+
+/* ── Salesforce placeholder ── */
+.sf-placeholder {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sf-stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.sf-stat {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  text-align: center;
+}
+.sf-stat-num {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--sf);
+  letter-spacing: -1px;
+}
+.sf-stat-label { font-size: 10px; color: var(--fg3); margin-top: 1px; }
+.sf-rows { display: flex; flex-direction: column; gap: 4px; }
+.sf-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.sf-row-id { font-family: var(--mono); font-size: 10.5px; color: var(--fg3); min-width: 60px; }
+.sf-row-client { font-size: 12px; font-weight: 500; color: var(--fg); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sf-row-status {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.sf-row-status.open { background: rgba(247,129,102,0.15); color: #f78166; }
+.sf-row-status.pending { background: rgba(255,200,50,0.15); color: #d4a017; }
+.sf-connect-cta {
+  padding: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--fg3);
+}
+.sf-connect-cta a { color: var(--sf); text-decoration: none; }
+
+/* ── Teams styles ── */
+.teams-placeholder { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.teams-group {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.teams-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(98,100,167,0.06);
+}
+.teams-group-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  flex: 1;
+}
+.teams-group-badge {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--mono);
+  background: var(--teams);
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+.teams-msg {
+  display: flex;
+  gap: 8px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.teams-msg:last-child { border-bottom: none; }
+.teams-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--teams);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.teams-msg-body { flex: 1; min-width: 0; }
+.teams-msg-top {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+.teams-msg-from { font-size: 12px; font-weight: 600; color: var(--fg); }
+.teams-msg-time { font-size: 10px; color: var(--fg3); font-family: var(--mono); }
+.teams-msg-text { font-size: 11.5px; color: var(--fg2); line-height: 1.4; word-break: break-word; }
+.teams-msg-text .at { color: var(--teams); font-weight: 500; }
+.teams-connect-cta {
+  padding: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--fg3);
+}
+.teams-connect-cta a { color: var(--teams); text-decoration: none; }
+</style>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">Hub <span>Viallet</span></div>
+    <div class="updated" id="updated-time">mis à jour —</div>
+  </div>
+  <div class="topbar-right">
+    <button class="theme-btn" onclick="toggleTheme()">☀ / ☾</button>
+    <button class="refresh-btn">↻ Actualiser</button>
+  </div>
+</div>
+
+<!-- Main grid -->
+<div class="grid">
+
+  <!-- ── Outlook ── -->
+  <div class="panel panel-outlook">
+    <div class="panel-header">
+      <div class="panel-title">
+        <div class="panel-icon icon-ol">✉</div>
+        Outlook
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span class="badge badge-ol">7</span>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="ol-placeholder">
+        <div>
+          <div class="ol-date-header">Jeudi 29 octobre</div>
+          <div class="ol-date-sub">Semaine 44 · 2026</div>
+        </div>
+
+        <div>
+          <div class="section-label">Agenda du jour</div>
+          <div class="ol-events">
+            <div class="ol-event">
+              <div class="ol-event-time">09:00</div>
+              <div>
+                <div class="ol-event-title">Atelier de travail</div>
+                <div class="ol-event-sub">Journée complète · jusqu'à 18:00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-label">Mails non lus (7)</div>
+          <div class="ol-mail-list">
+            <div class="ol-mail unread">
+              <div class="ol-mail-dot"></div>
+              <div class="ol-mail-from">Myrianne Renoult</div>
+              <div class="ol-mail-sub">fusion du 03/01/2027</div>
+              <div class="ol-mail-time">12:27</div>
+            </div>
+            <div class="ol-mail unread">
+              <div class="ol-mail-dot"></div>
+              <div class="ol-mail-from">Bertrand Huynh</div>
+              <div class="ol-mail-sub">EVERYS Commande fournisseur CF264894</div>
+              <div class="ol-mail-time">12:12</div>
+            </div>
+            <div class="ol-mail unread">
+              <div class="ol-mail-dot"></div>
+              <div class="ol-mail-from">Olivier Peullier +6</div>
+              <div class="ol-mail-sub">intervention vendredi 1er janvier 2027</div>
+              <div class="ol-mail-time">11:57</div>
+            </div>
+            <div class="ol-mail unread">
+              <div class="ol-mail-dot"></div>
+              <div class="ol-mail-from">administratif</div>
+              <div class="ol-mail-sub">RTT — modification de planning</div>
+              <div class="ol-mail-time">11:29</div>
+            </div>
+            <div class="ol-mail unread">
+              <div class="ol-mail-dot"></div>
+              <div class="ol-mail-from">Salesforce Chatter</div>
+              <div class="ol-mail-sub">Votre résumé quotidien pour Winpharma</div>
+              <div class="ol-mail-time">00:27</div>
+            </div>
+            <div class="ol-mail unread">
+              <div class="ol-mail-dot"></div>
+              <div class="ol-mail-from">Myrianne RENOULT</div>
+              <div class="ol-mail-sub">Interventions du lendemain</div>
+              <div class="ol-mail-time">Mer 18:00</div>
+            </div>
+            <div class="ol-mail unread">
+              <div class="ol-mail-dot"></div>
+              <div class="ol-mail-from">Myrianne RENOULT</div>
+              <div class="ol-mail-sub">Tâches Administratives &amp; Absences</div>
+              <div class="ol-mail-time">Mer 18:00</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Salesforce ── -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <div class="panel-icon icon-sf">⚡</div>
+        Salesforce FSL — Interventions non clôturées
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span class="badge badge-sf">4</span>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="sf-placeholder">
+        <div class="sf-stat-row">
+          <div class="sf-stat">
+            <div class="sf-stat-num">4</div>
+            <div class="sf-stat-label">Non clôturées</div>
+          </div>
+          <div class="sf-stat">
+            <div class="sf-stat-num">4</div>
+            <div class="sf-stat-label">Expédiées</div>
+          </div>
+          <div class="sf-stat">
+            <div class="sf-stat-num">0</div>
+            <div class="sf-stat-label">Urgentes</div>
+          </div>
+        </div>
+        <div class="sf-rows">
+          <div class="sf-row">
+            <div class="sf-row-id">SA-67635</div>
+            <div class="sf-row-client">SELARL PHARMACIE DU CENTRE</div>
+            <div class="sf-row-status open">23/09 09:00</div>
+          </div>
+          <div class="sf-row">
+            <div class="sf-row-id">SA-67056</div>
+            <div class="sf-row-client">PHARMACIE DU DOCTEUR SCHWEITZER</div>
+            <div class="sf-row-status open">26/10 09:00</div>
+          </div>
+          <div class="sf-row">
+            <div class="sf-row-id">SA-67598</div>
+            <div class="sf-row-client">PHARMACIE COEUR DE SEVRES</div>
+            <div class="sf-row-status open">23/10 13:00</div>
+          </div>
+          <div class="sf-row">
+            <div class="sf-row-id">SA-68226</div>
+            <div class="sf-row-client">PHARMACIE DE L'INTERCO</div>
+            <div class="sf-row-status open">27/10 09:00</div>
+          </div>
+        </div>
+        <div style="padding:4px 14px 8px;font-size:11px;color:var(--fg3);">
+          Matthieu VIALLET · Rapport FSL filtré
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Teams ── -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <div class="panel-icon icon-teams">T</div>
+        Microsoft Teams
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="teams-placeholder">
+
+        <!-- Bouton ouvrir Teams desktop -->
+        <div style="padding:14px 14px 6px;">
+          <a href="msteams://" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--teams-soft);border:1px solid var(--teams);border-radius:8px;text-decoration:none;color:var(--fg);font-weight:600;font-size:13px;">
+            <div style="width:32px;height:32px;background:var(--teams);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;flex-shrink:0;">T</div>
+            <div>
+              <div>Ouvrir Microsoft Teams</div>
+              <div style="font-size:11px;font-weight:400;color:var(--fg2);margin-top:1px;">Application de bureau installée</div>
+            </div>
+            <div style="margin-left:auto;font-size:18px;color:var(--fg3);">↗</div>
+          </a>
+        </div>
+
+        <!-- Notifications Teams via Outlook -->
+        <div style="padding:6px 14px 4px;">
+          <div class="section-label">Notifications @mentions (via Outlook)</div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--teams);border-radius:6px;">
+              <span style="font-size:11px;background:var(--teams);color:#fff;padding:1px 5px;border-radius:4px;font-weight:700;flex-shrink:0;">@</span>
+              <div style="min-width:0;">
+                <div style="font-size:12px;font-weight:600;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Bertrand Huynh; Philippe Ingrand</div>
+                <div style="font-size:11px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">EVERYS Commande fournisseur Réf.:CF264894</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--teams);border-radius:6px;">
+              <span style="font-size:11px;background:var(--teams);color:#fff;padding:1px 5px;border-radius:4px;font-weight:700;flex-shrink:0;">@</span>
+              <div style="min-width:0;">
+                <div style="font-size:12px;font-weight:600;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Alexis Eoche</div>
+                <div style="font-size:11px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Important – Situation de santé et sécurité du déplacement</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="teams-group" style="display:none;">
+          <div class="teams-group-header">
+            <div class="teams-group-name">🌐 Baie de Brassage — Projet</div>
+            <div class="teams-group-badge">2</div>
+          </div>
+          <div class="teams-msg">
+            <div class="teams-avatar">PM</div>
+            <div class="teams-msg-body">
+              <div class="teams-msg-top">
+                <div class="teams-msg-from">Pierrick Midelet</div>
+                <div class="teams-msg-time">hier</div>
+              </div>
+              <div class="teams-msg-text"><span class="at">@Matthieu V</span> <span class="at">@Sébastien D</span> — Retour atelier : on part sur Salesforce pour tracer les besoins ?</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Winteam ── -->
+  <div class="panel panel-winteam" style="overflow:hidden;">
+    <div class="panel-header">
+      <div class="panel-title">
+        <div class="panel-icon icon-wt">W</div>
+        Winteam — Rapport
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span class="badge badge-wt">@3</span>
+        <span class="badge badge-grey">1 important</span>
+      </div>
+    </div>
+    <div class="panel-body">
+
+      <div class="section-label">@Mentions non lues</div>
+
+      <!-- Groupe 1 -->
+      <div class="group-sep">
+        <div class="group-sep-label">PROCESS_BAIE DE BRASSAGE 🌐</div>
+        <div class="group-sep-badge">@2</div>
+        <div class="group-sep-line"></div>
+      </div>
+
+      <div class="mention-card">
+        <div class="mention-top">
+          <div>
+            <div class="mention-author">Alexis Eoche</div>
+            <div class="mention-reply">↩ réponse à son fil</div>
+          </div>
+          <div class="mention-date">30 sept.</div>
+        </div>
+        <div class="mention-preview">
+          <span class="at">@Matthieu V</span>, <span class="at">@Vincent M</span>, <span class="at">@Sébastien D</span>, <span class="at">@Pierrick M</span> — Ok pour vous ? Si oui, maj du process et com à l'équipe.
+        </div>
+        <div class="action-needed">⚡ Validation attendue</div>
+      </div>
+
+      <div class="mention-card">
+        <div class="mention-top">
+          <div>
+            <div class="mention-author">Pierrick Midelet</div>
+            <div class="mention-reply">↩ réponse à Alexis Eoche</div>
+          </div>
+          <div class="mention-date">30 sept.</div>
+        </div>
+        <div class="mention-preview">
+          <span class="at">@Alexis E</span>, <span class="at">@Matthieu V</span>, <span class="at">@Sébastien D</span>, <span class="at">@Vincent M</span> — Pour moi, l'idée de tracer le besoin dans Salesforce est bonne, ça centralise l'info.
+        </div>
+      </div>
+
+      <!-- Groupe 2 -->
+      <div class="group-sep" style="margin-top:6px;">
+        <div class="group-sep-label">DEPLOIEMENT WAOUH ! 🪂</div>
+        <div class="group-sep-badge">@1</div>
+        <div class="group-sep-line"></div>
+      </div>
+
+      <div class="mention-card">
+        <div class="mention-top">
+          <div>
+            <div class="mention-author">Alexis Eoche</div>
+          </div>
+          <div class="mention-date">05 oct.</div>
+        </div>
+        <div class="mention-preview">
+          <span class="at">@Michel D</span>, <span class="at">@Pascal B</span>, <span class="at">@Pierre G</span>, <span class="at">@Ousén S</span>, <span class="at">@Mickael L</span>, <span class="at">@Denis D</span>, <span class="at">@Vincent M</span>, <span class="at">@Pierrick M</span>, <span class="at">@Linda L</span>, <span class="at">@Matthieu V</span>… — Mise à jour d'équipe déploiement.
+        </div>
+      </div>
+
+      <!-- Message important -->
+      <div class="section-label">Message important</div>
+      <div class="important-card mention-card">
+        <div class="important-tag">⚠ Important</div>
+        <div class="mention-top">
+          <div>
+            <div class="mention-author">Irina Audren</div>
+            <div class="mention-reply">↩ WINPHARMA SUPPORT ET DEPLOIEMENT</div>
+          </div>
+          <div class="mention-date">15 mars 2024</div>
+        </div>
+        <div class="mention-preview">
+          #Serveur_SMTP_EVERYS #RAPPEL — Ce sujet a été remonté déjà plusieurs fois. Merci de traiter en priorité.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Theme toggle
+  function toggleTheme() {
+    const r = document.documentElement;
+    const cur = r.getAttribute('data-theme');
+    r.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+    try { localStorage.setItem('hub-theme', r.getAttribute('data-theme')); } catch(e){}
+  }
+  try {
+    const saved = localStorage.getItem('hub-theme');
+    if (saved) document.documentElement.setAttribute('data-theme', saved);
+  } catch(e){}
+
+  // ── Chargement dynamique depuis /api/data ────────────────────────────
+  function statusLabel(s) {
+    const m = {
+      'expédié': {cls:'open', label:'Expédié'},
+      'en cours': {cls:'open', label:'En cours'},
+      'planifié': {cls:'open', label:'Planifié'},
+      'en attente': {cls:'pending', label:'En attente'},
+      'impossible de terminer': {cls:'pending', label:'Impossible fin'},
+    };
+    return m[(s||'').toLowerCase()] || {cls:'open', label: s||'?'};
+  }
+
+  function renderSF(sf) {
+    if (!sf || !sf.interventions) return;
+    const items = sf.interventions;
+    const stats = sf.stats || {};
+    // Badge
+    document.querySelector('.badge-sf').textContent = stats.total || items.length;
+    // Stats
+    const nums = document.querySelectorAll('.sf-stat-num');
+    if (nums[0]) nums[0].textContent = stats.total || items.length;
+    if (nums[1]) nums[1].textContent = stats.en_attente || items.length;
+    if (nums[2]) nums[2].textContent = stats.urgentes || 0;
+    // Rows
+    const rows = document.querySelector('.sf-rows');
+    if (!rows) return;
+    rows.innerHTML = items.map(r => {
+      const st = statusLabel(r.status);
+      const date = (r.date||'').slice(0,10).replace(/(\d{4})-(\d{2})-(\d{2})/, '$3/$2') || '—';
+      return `<div class="sf-row">
+        <div class="sf-row-id">${r.id}</div>
+        <div class="sf-row-client">${r.client||'—'}</div>
+        <div class="sf-row-status ${st.cls}">${date}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderOutlook(ol) {
+    if (!ol) return;
+    const mails = (ol.mails||[]).filter(m => m.isUnread);
+    const badge = document.querySelector('.badge-ol');
+    if (badge) badge.textContent = mails.length;
+    // Label count
+    const label = document.querySelector('.ol-placeholder .section-label');
+    if (label && label.textContent.includes('Mail')) label.textContent = `Mails non lus (${mails.length})`;
+    // Mail list
+    const list = document.querySelector('.ol-mail-list');
+    if (list && mails.length > 0) {
+      list.innerHTML = mails.slice(0,8).map(m => `
+        <div class="ol-mail unread">
+          <div class="ol-mail-dot"></div>
+          <div class="ol-mail-from">${m.from||''}</div>
+          <div class="ol-mail-sub">${m.subject||''}</div>
+          <div class="ol-mail-time">${m.date||''}</div>
+        </div>`).join('');
+    }
+  }
+
+  async function loadData() {
+    try {
+      const res = await fetch('/api/data');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.updated_at) {
+        const d = new Date(data.updated_at);
+        document.getElementById('updated-time').textContent =
+          'mis à jour ' + d.toLocaleString('fr-FR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+      }
+      renderSF(data.salesforce);
+      renderOutlook(data.outlook);
+    } catch(e) {
+      // Fallback silencieux si pas de /api/data (fichier statique)
+      const d = new Date('2026-10-29T14:54:00');
+      document.getElementById('updated-time').textContent =
+        'mis à jour ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+    }
+  }
+
+  loadData();
+  document.querySelector('.refresh-btn').addEventListener('click', loadData);
+</script>
